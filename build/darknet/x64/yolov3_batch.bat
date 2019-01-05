@@ -1,0 +1,1 @@
+START darknet.exe detector demo custom/trainer.data custom/yolov3.cfg weights/yolov3_6300.weights Videos/landon_demo.mp4
