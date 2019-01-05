@@ -1,0 +1,5 @@
+classes = 19
+train  = D:\Course\RoadSignDetection\YoloV3_Training\darknet\build\darknet\x64\custom\train.txt  
+valid  = D:\Course\RoadSignDetection\YoloV3_Training\darknet\build\darknet\x64\custom\test.txt  
+names = D:\Course\RoadSignDetection\YoloV3_Training\darknet\build\darknet\x64\custom\object.names  
+backup = D:\Course\RoadSignDetection\YoloV3_Training\darknet\build\darknet\x64\custom\backup\
