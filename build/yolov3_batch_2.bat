@@ -1,0 +1,1 @@
+START darknet/x64/darknet.exe detector demo darknet/x64/custom/trainer.data darknet/x64/custom/yolov3.cfg darknet/x64/weights/yolov3_14400.weights darknet/x64/Videos/TestVideo_2.mp4
