@@ -1,1 +1,1 @@
-START darknet/x64/darknet.exe detector demo darknet/x64/custom/trainer.data darknet/x64/custom/yolov3.cfg darknet/x64/weights/yolov3_14400.weights darknet/x64/Videos/TestVideo_1.mp4 -out images.result.txt
+START darknet/x64/darknet.exe detector demo -save_imgfile 1 -ext_output -thresh 0.80 -frame_count 16 darknet/x64/custom/trainer.data darknet/x64/custom/yolov3.cfg darknet/x64/weights/yolov3_14400.weights darknet/x64/Videos/TestVideo_1.mp4
