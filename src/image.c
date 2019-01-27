@@ -27,6 +27,8 @@ int windows = 0;
 
 float colors[6][3] = { {1,0,1}, {0,0,1},{0,1,1},{0,1,0},{1,1,0},{1,0,0} };
 
+//float maxProb = 0.0;
+
 float get_color(int c, int x, int max)
 {
     float ratio = ((float)x/max)*5;
@@ -67,6 +69,56 @@ static void add_pixel(image m, int x, int y, int c, float val)
     m.data[c*m.h*m.w + y*m.w + x] += val;
 }
 
+struct CsvData { 
+  time_t *timeValue; 
+  char const *signName; 
+  float probabilityDet; 
+}; 
+ 
+time_t *prevtimeValue; 
+char const *prevsignName; 
+int prevDetBox;
+
+
+int write_to_file(struct CsvData *data, char const *fileName, IplImage* show_img, int cnt, char *save_imgfile) 
+{ 
+  FILE *f = fopen(fileName, "a"); 
+  char *folder_path="./ImagesDatabase/";
+  time_t s, val = 1;
+    struct tm* current_time;
+
+    // time in seconds 
+    s = time(NULL);
+
+    // to get current time 
+    current_time = localtime(&s);
+  if (f == NULL) return -1; 
+  if ((prevsignName != data->signName && prevtimeValue != current_time)||
+        (prevsignName != data->signName && prevtimeValue == current_time)||
+        (prevsignName == data->signName && prevtimeValue == current_time && cnt != prevDetBox))
+  {
+    prevtimeValue = current_time;
+    prevsignName = data->signName;
+    prevDetBox = cnt;
+  //while (count-- > 0) { 
+    // you might want to check for out-of-disk-space here, too 
+    fprintf(f, "%02d:%02d:%02d,%s,%f\n", current_time->tm_hour,current_time->tm_min,
+    current_time->tm_sec, data->signName, data->probabilityDet); 
+    if (save_imgfile)
+    {
+        char buff[256];
+        sprintf(buff, "%s%02d_%02d_%02d_%s_%d.jpg", folder_path, current_time->tm_hour,current_time->tm_min,
+        current_time->tm_sec,data->signName,cnt);
+       cvSaveImage(buff, show_img, 0);
+    }
+    
+  }
+  
+    //++data; 
+ // } 
+  fclose(f); 
+  return 0; 
+}
 void composite_image(image source, image dest, int dx, int dy)
 {
     int x,y,k;
@@ -279,7 +331,7 @@ void draw_detections_v3(image im, detection *dets, int num, float thresh, char *
 {
     int selected_detections_num;
     detection_with_class* selected_detections = get_actual_detections(dets, num, thresh, &selected_detections_num);
-
+	
     // text output
     qsort(selected_detections, selected_detections_num, sizeof(*selected_detections), compare_by_lefts);
     int i;
@@ -287,10 +339,12 @@ void draw_detections_v3(image im, detection *dets, int num, float thresh, char *
         const int best_class = selected_detections[i].best_class;
         printf("%s: %.0f%%", names[best_class],    selected_detections[i].det.prob[best_class] * 100);
         if (ext_output)
+        {
             printf("\t(left_x: %4.0f   top_y: %4.0f   width: %4.0f   height: %4.0f)\n",
                 (selected_detections[i].det.bbox.x - selected_detections[i].det.bbox.w / 2)*im.w,
                 (selected_detections[i].det.bbox.y - selected_detections[i].det.bbox.h / 2)*im.h,
                 selected_detections[i].det.bbox.w*im.w, selected_detections[i].det.bbox.h*im.h);
+        }
         else
             printf("\n");
         int j;
@@ -437,29 +491,54 @@ void draw_detections(image im, int num, float thresh, box *boxes, float **probs,
 
 #ifdef OPENCV
 
-void draw_detections_cv_v3(IplImage* show_img, detection *dets, int num, float thresh, char **names, image **alphabet, int classes, int ext_output)
+void draw_detections_cv_v3(IplImage* show_img, detection *dets, int num, float thresh, char **names, image **alphabet, int classes, int ext_output, int frame_count, char *save_imgfile)
 {
     int i, j;
     if (!show_img) return;
     static int frame_id = 0;
     frame_id++;
+    
+    int detected;
+    float firstProb = 0.0;
+    const char* classname = "noclass";
+    const char myFile[] = "DetectedSigns.csv";
+    struct CsvData samdata = {" ",0};
+    struct CsvData *moiData = &samdata ;
 
     for (i = 0; i < num; ++i) {
+        detected = 0;
+        printf("i = %d",i);
         char labelstr[4096] = { 0 };
         int class_id = -1;
         for (j = 0; j < classes; ++j) {
+            printf("j = %d",j);
             if (dets[i].prob[j] > thresh) {
                 if (class_id < 0) {
                     strcat(labelstr, names[j]);
                     class_id = j;
+                    if (detected == 0) 
+                    {
+                        detected = 1;
+                        classname = names[j];
+                        firstProb = dets[i].prob[j];
+                    }
                 }
                 else {
                     strcat(labelstr, ", ");
                     strcat(labelstr, names[j]);
                 }
                 printf("%s: %.0f%% ", names[j], dets[i].prob[j] * 100);
+
             }
+            // if (detected == 1 && frame_id%frame_count==0)
+            // {
+            //     moiData->signName = classname;
+            //     moiData->probabilityDet = firstProb * 100;
+            //     write_to_file(moiData,myFile,show_img,i);
+            //     printf("\nframe_count = %d\n",frame_count);
+            // }
         }
+        
         if (class_id >= 0) {
             int width = show_img->height * .006;
 
@@ -547,6 +626,13 @@ void draw_detections_cv_v3(IplImage* show_img, detection *dets, int num, float t
             cvInitFont(&font, CV_FONT_HERSHEY_SIMPLEX, font_size, font_size, 0, font_size * 3, 8);
             cvPutText(show_img, labelstr, pt_text, &font, black_color);
         }
+        if (detected == 1 && frame_id%frame_count==0)
+            {
+                moiData->signName = classname;
+                moiData->probabilityDet = firstProb * 100;
+                write_to_file(moiData,myFile,show_img,i,save_imgfile);
+                printf("\nframe_count = %d\n",frame_count);
+            }
     }
     if (ext_output) {
         fflush(stdout);
@@ -1104,7 +1190,7 @@ image get_image_from_stream_letterbox(CvCapture *cap, int w, int h, int c, IplIm
 
 int get_stream_fps(CvCapture *cap, int cpp_video_capture)
 {
-    int fps = 25;
+    int fps = 30;
     if (cpp_video_capture) {
         fps = get_stream_fps_cpp(cap);
     }

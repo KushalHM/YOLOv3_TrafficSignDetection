@@ -41,6 +41,7 @@ static int cpp_video_capture = 0;
 static float fps = 0;
 static float demo_thresh = 0;
 static int demo_ext_output = 0;
+static int demo_frame_count = 0;
 
 static float *predictions[FRAMES];
 static int demo_index = 0;
@@ -49,7 +50,7 @@ static IplImage* ipl_images[FRAMES];
 static float *avg;
 
 void draw_detections_cv(IplImage* show_img, int num, float thresh, box *boxes, float **probs, char **names, image **alphabet, int classes);
-void draw_detections_cv_v3(IplImage* show_img, detection *dets, int num, float thresh, char **names, image **alphabet, int classes, int ext_output);
+void draw_detections_cv_v3(IplImage* show_img, detection *dets, int num, float thresh, char **names, image **alphabet, int classes, int ext_output, int frame_count);
 void show_image_cv_ipl(IplImage *disp, const char *name);
 image get_image_from_stream_resize(CvCapture *cap, int w, int h, int c, IplImage** in_img, int cpp_video_capture, int dont_close);
 image get_image_from_stream_letterbox(CvCapture *cap, int w, int h, int c, IplImage** in_img, int cpp_video_capture, int dont_close);
@@ -113,7 +114,7 @@ void *detect_in_thread(void *ptr)
     det_img = ipl_images[(demo_index + FRAMES / 2 + 1) % FRAMES];
     demo_index = (demo_index + 1)%FRAMES;
 
-    draw_detections_cv_v3(det_img, dets, nboxes, demo_thresh, demo_names, demo_alphabet, demo_classes, demo_ext_output);
+    draw_detections_cv_v3(det_img, dets, nboxes, demo_thresh, demo_names, demo_alphabet, demo_classes, demo_ext_output, demo_frame_count);
     free_detections(dets, nboxes);
 
     return 0;
@@ -129,7 +130,7 @@ double get_wall_time()
 }
 
 void demo(char *cfgfile, char *weightfile, float thresh, float hier_thresh, int cam_index, const char *filename, char **names, int classes,
-    int frame_skip, char *prefix, char *out_filename, int http_stream_port, int dont_show, int ext_output)
+    int frame_skip, char *prefix, char *out_filename, int http_stream_port, int dont_show, int ext_output, int frame_count, char *save_imgfile)
 {
     //skip = frame_skip;
     image **alphabet = load_alphabet();
@@ -139,6 +140,7 @@ void demo(char *cfgfile, char *weightfile, float thresh, float hier_thresh, int 
     demo_classes = classes;
     demo_thresh = thresh;
     demo_ext_output = ext_output;
+    demo_frame_count = frame_count;
     printf("Demo\n");
     net = parse_network_cfg_custom(cfgfile, 1);    // set batch=1
     if(weightfile){

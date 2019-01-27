@@ -1221,6 +1221,8 @@ void run_detector(int argc, char **argv)
     // and for recall mode (extended output table-like format with results for best_class fit)
     int ext_output = find_arg(argc, argv, "-ext_output");
     int save_labels = find_arg(argc, argv, "-save_labels");
+    int frame_count = find_int_arg(argc, argv, "-frame_count", 10);
+    char *save_imgfile = find_char_arg(argc, argv, "-save_imgfile", 0);
     if(argc < 4){
         fprintf(stderr, "usage: %s %s [train/test/valid] [cfg] [weights (optional)]\n", argv[0], argv[1]);
         return;
@@ -1272,7 +1274,7 @@ void run_detector(int argc, char **argv)
             if(strlen(filename) > 0)
                 if (filename[strlen(filename) - 1] == 0x0d) filename[strlen(filename) - 1] = 0;
         demo(cfg, weights, thresh, hier_thresh, cam_index, filename, names, classes, frame_skip, prefix, out_filename,
-            http_stream_port, dont_show, ext_output);
+            http_stream_port, dont_show, ext_output, frame_count, save_imgfile);
 
         free_list_contents_kvp(options);
         free_list(options);
